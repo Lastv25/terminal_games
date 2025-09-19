@@ -2,42 +2,75 @@ package main
 
 import (
 	"Coding/games/models"
-	"bufio"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Prompting user choices and validating against enum
-func WhichGame(label string) string {
-	var str string
-	r := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Fprint(os.Stderr, label+" ")
-		str, _ = r.ReadString('\n')
-		if str != "" {
-			break
-		}
-	}
-	return strings.TrimSpace(str)
+type model struct {
+	choices  []models.Games
+	cursor   int
+	selected int
 }
 
-// Main Loop
-func main() {
-	fmt.Println("To start a game select between the available ones:")
-	idx := 1
-	for i := models.StartGame + 1; i < models.EndGame; i++ {
-		fmt.Println("For", models.Games(i), "Enter", idx)
-		idx += 1
+func initialModel() model {
+	return model{
+		choices:  []models.Games{models.Hive, models.Hortis, models.Star_Realms},
+		cursor:   0,
+		selected: -1, // none selected initially
 	}
-	game_idx_str := WhichGame("Enter the game idx:")
-	game_idx, err := strconv.ParseInt(game_idx_str, 10, 64)
-	if err != nil {
-		// handle error
-		fmt.Println("Error:", err)
+}
+
+func (m model) Init() tea.Cmd {
+	return nil
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			if m.cursor < len(m.choices)-1 {
+				m.cursor++
+			}
+		case "enter":
+			m.selected = m.cursor
+			return m, tea.Quit
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+func (m model) View() string {
+	s := "Choose an option:\n\n"
+	for i, choice := range m.choices {
+		cursor := " " // no cursor by default
+		if m.cursor == i {
+			cursor = ">" // cursor pointer
+		}
+		selected := " " // no selection by default
+		if m.selected == i {
+			selected = "x" // selected marker
+		}
+		s += fmt.Sprintf("%s [%s] %s\n", cursor, selected, choice)
+	}
+	if m.selected >= 0 {
+		s += fmt.Sprintf("\nYou selected: %s\n", m.choices[m.selected])
+	} else {
+		s += "\nPress Enter to select, q to quit.\n"
+	}
+	return s
+}
+
+func main() {
+	p := tea.NewProgram(initialModel())
+	if err := p.Start(); err != nil {
+		fmt.Printf("Error starting program: %v\n", err)
 		return
 	}
-	fmt.Println("Input was:", game_idx)
-	fmt.Println("Game chosen was:", models.Games(game_idx))
 }
