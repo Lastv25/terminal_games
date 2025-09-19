@@ -4,73 +4,48 @@ import (
 	"Coding/games/models"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"strings"
 )
 
-type model struct {
-	choices  []models.Games
-	cursor   int
-	selected int
+// model to display after the choice is made
+type displayModel struct {
+	selected string
 }
 
-func initialModel() model {
-	return model{
-		choices:  []models.Games{models.Hive, models.Hortis, models.Star_Realms},
-		cursor:   0,
-		selected: -1, // none selected initially
-	}
-}
+func (m displayModel) Init() tea.Cmd { return nil }
 
-func (m model) Init() tea.Cmd {
-	return nil
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m displayModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-		case "enter":
-			m.selected = m.cursor
-			return m, tea.Quit
-		case "ctrl+c", "q":
+		if msg.String() == "q" || msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 	}
 	return m, nil
 }
 
-func (m model) View() string {
-	s := "Choose an option:\n\n"
-	for i, choice := range m.choices {
-		cursor := " " // no cursor by default
-		if m.cursor == i {
-			cursor = ">" // cursor pointer
-		}
-		selected := " " // no selection by default
-		if m.selected == i {
-			selected = "x" // selected marker
-		}
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, selected, choice)
-	}
-	if m.selected >= 0 {
-		s += fmt.Sprintf("\nYou selected: %s\n", m.choices[m.selected])
-	} else {
-		s += "\nPress Enter to select, q to quit.\n"
-	}
-	return s
+func (m displayModel) View() string {
+	fmt.Println(strings.Repeat("-", 100))
+	fmt.Println("This a new TUI loop")
+	return fmt.Sprintf("You selected: %s\n\nPress q to quit.\n", m.selected)
 }
-
 func main() {
-	p := tea.NewProgram(initialModel())
-	if err := p.Start(); err != nil {
+	choiceProg := tea.NewProgram(models.InitialModel())
+	finalModel, err := choiceProg.Run()
+	if err != nil {
 		fmt.Printf("Error starting program: %v\n", err)
 		return
+	}
+
+	choiceM := finalModel.(models.InitMenu)
+	if choiceM.Selected() < 0 {
+		// No selection made, exit
+		return
+	}
+	// After choice is made, run new Bubble Tea program displaying selection
+	sel := choiceM.Choices()[choiceM.Selected()].String()
+	displayProg := tea.NewProgram(displayModel{selected: sel})
+	if err := displayProg.Start(); err != nil {
+		fmt.Printf("Error running display model: %v\n", err)
 	}
 }
