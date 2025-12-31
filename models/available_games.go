@@ -1,30 +1,32 @@
 package models
 
-// Defining the games
-type Games int64
 
-// StartGame and EndGame are only usefull to iterate over the enum values using a simple for loop
-const (
-	StartGame Games = iota
-	Hortis
-	Hive
-	Star_Realms
-	EndGame
-)
+// Game represents a playable game
+type Game struct {
+	Name        string
+	Description string
+	Icon        string
+}
 
-func (s Games) String() string {
-	switch s {
-	case Hortis:
-		return "Hortis"
-	case Hive:
-		return "Hive"
-	case Star_Realms:
-		return "Star Realms"
+func (g Game) String() string {
+	return g.Name
+}
+
+// Predefined games
+var (
+	Hive = Game{
+		Name:        "Hive",
+		Description: "Strategic insect placement game",
+		Icon:        "🐝",
 	}
-	return "Unknown"
-}
-
-func IsValidGame(value int64) bool {
-	g := Games(value)
-	return g > StartGame && g < EndGame
-}
+	Hortis = Game{
+		Name:        "Hortis",
+		Description: "Garden building game",
+		Icon:        "🌱",
+	}
+	StarRealms = Game{
+		Name:        "Star Realms",
+		Description: "Space combat deck builder",
+		Icon:        "🚀",
+	}
+)
