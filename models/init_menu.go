@@ -112,9 +112,9 @@ func (m MenuModel) View() string {
 
 		if m.cursor == i {
 			cursor = " ▶ "
-			line = SelectedItemStyle.Render(fmt.Sprintf("%s %s", choice.Icon, choice.Name))
+			line = SelectedItemStyle.Render(fmt.Sprintf("%s", choice.Name))
 		} else {
-			line = ItemStyle.Render(fmt.Sprintf("%s %s", choice.Icon, choice.Name))
+			line = ItemStyle.Render(fmt.Sprintf("%s", choice.Name))
 		}
 
 		b.WriteString(cursor + line)
@@ -201,7 +201,7 @@ func (m InputModel) View() string {
 	var b strings.Builder
 
 	// Game header
-	header := TitleStyle.Render(fmt.Sprintf("%s  %s", m.game.Icon, m.game.Name))
+	header := TitleStyle.Render(fmt.Sprintf("%s", m.game.Name))
 	b.WriteString(header)
 	b.WriteString("\n\n")
 

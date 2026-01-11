@@ -5,7 +5,6 @@ package models
 type Game struct {
 	Name        string
 	Description string
-	Icon        string
 }
 
 func (g Game) String() string {
@@ -17,16 +16,13 @@ var (
 	Hive = Game{
 		Name:        "Hive",
 		Description: "Strategic insect placement game",
-		Icon:        "🐝",
 	}
 	Hortis = Game{
 		Name:        "Hortis",
 		Description: "Garden building game",
-		Icon:        "🌱",
 	}
 	StarRealms = Game{
 		Name:        "Star Realms",
 		Description: "Space combat deck builder",
-		Icon:        "🚀",
 	}
 )

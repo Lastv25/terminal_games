@@ -22,7 +22,7 @@ func main() {
 	// Check if user made a selection
 	menu := finalModel.(models.MenuModel)
 	if menu.Selected() < 0 {
-		fmt.Println("\nNo game selected. Goodbye! 👋")
+		fmt.Println("\nNo game selected. Goodbye!")
 		return
 	}
 
@@ -32,8 +32,8 @@ func main() {
 	fmt.Print("\033[H\033[2J") // Clear screen
 	fmt.Println()
 	fmt.Println(strings.Repeat("═", 60))
-	fmt.Printf("  🎮  Starting %s...\n", selectedGame.Name)
-	fmt.Printf("      %s\n", selectedGame.Description)
+	fmt.Printf("Starting %s...\n", selectedGame.Name)
+	fmt.Printf("%s\n", selectedGame.Description)
 	fmt.Println(strings.Repeat("═", 60))
 	fmt.Println()
 
@@ -58,6 +58,6 @@ func main() {
 	}
 
 	// Exit message
-	fmt.Println("\n✨ Thanks for playing! See you next time! ✨\n")
+	fmt.Println("\nThanks for playing! See you next time!\n")
 }
 

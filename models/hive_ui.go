@@ -162,7 +162,7 @@ func (m HiveModel) renderPiecesPanel(width, height int) string {
 func (m HiveModel) renderBoardPanel(width, height int) string {
 	var b strings.Builder
 	
-	b.WriteString(PanelTitleStyle.Render(fmt.Sprintf("%s Game Board", m.game.Icon)))
+	b.WriteString(PanelTitleStyle.Render(fmt.Sprintf("Game Board")))
 	b.WriteString("\n\n")
 	
 	for _, line := range m.board {
