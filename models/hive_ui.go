@@ -9,8 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-
-// Style definitions
+// Style definitions for Hive
 var (
 	PanelStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -28,7 +27,9 @@ var (
 	
 	BoardStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7D56F4"))
+
 )
+
 // HiveModel handles the 4-panel Hive game interface
 type HiveModel struct {
 	game         Game
@@ -43,20 +44,20 @@ type HiveModel struct {
 // NewHiveModel creates a new Hive game model with 4-panel layout
 func NewHiveModel(game Game) HiveModel {
 	ti := textinput.New()
-	ti.Placeholder = "Enter move (e.g., 'place Queen at 0,0')..."
+	ti.Placeholder = "Enter move (e.g., 'place Q at 0,0')..."
 	ti.Focus()
 	ti.CharLimit = 100
 	ti.Width = 40
 	ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF06B7"))
 	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
 	
-	// Initialize available pieces
+	// Initialize available pieces using first letter notation
 	pieces := []string{
-		"🐝 Queen Bee (1)",
-		"🐜 Ant (3)",
-		"🦗 Grasshopper (3)",
-		"🕷️  Spider (2)",
-		"🪲 Beetle (2)",
+		"Q - Queen Bee (1)",
+		"A - Ant (3)",
+		"G - Grasshopper (3)",
+		"S - Spider (2)",
+		"B - Beetle (2)",
 	}
 	
 	// Initialize empty board representation
@@ -105,7 +106,7 @@ func (m HiveModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				
 				// Simple command processing (you can expand this)
 				if strings.Contains(strings.ToLower(value), "place") {
-					m.board = append(m.board, fmt.Sprintf("  ● Piece placed: %s", value))
+					m.board = append(m.board, fmt.Sprintf("  * Piece placed: %s", value))
 				}
 			}
 			return m, nil
@@ -162,7 +163,7 @@ func (m HiveModel) renderPiecesPanel(width, height int) string {
 func (m HiveModel) renderBoardPanel(width, height int) string {
 	var b strings.Builder
 	
-	b.WriteString(PanelTitleStyle.Render(fmt.Sprintf("Game Board")))
+	b.WriteString(PanelTitleStyle.Render("Game Board"))
 	b.WriteString("\n\n")
 	
 	for _, line := range m.board {
@@ -180,7 +181,7 @@ func (m HiveModel) renderCommandPanel(width, height int) string {
 	b.WriteString(PanelTitleStyle.Render("Command Input"))
 	b.WriteString("\n\n")
 	
-	b.WriteString(InputLabelStyle.Render("› "))
+	b.WriteString(InputLabelStyle.Render("> "))
 	b.WriteString(m.textInput.View())
 	b.WriteString("\n\n")
 	
