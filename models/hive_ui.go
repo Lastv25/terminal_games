@@ -27,6 +27,10 @@ var (
 	
 	BoardStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7D56F4"))
+	
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")).
+			PaddingLeft(2)
 
 )
 
@@ -35,47 +39,33 @@ type HiveModel struct {
 	game         Game
 	textInput    textinput.Model
 	messages     []string
-	pieces       []string
-	board        []string
+	board        *HexBoard
+	renderer     *HexRenderer
 	width        int
 	height       int
+	lastError    string
 }
 
 // NewHiveModel creates a new Hive game model with 4-panel layout
 func NewHiveModel(game Game) HiveModel {
 	ti := textinput.New()
-	ti.Placeholder = "Enter move (e.g., 'place Q at 0,0')..."
+	ti.Placeholder = "place WQ 0 0  |  move WQ 0 0 1 0"
 	ti.Focus()
 	ti.CharLimit = 100
 	ti.Width = 40
 	ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF06B7"))
 	ti.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
 	
-	// Initialize available pieces using first letter notation
-	pieces := []string{
-		"Q - Queen Bee (1)",
-		"A - Ant (3)",
-		"G - Grasshopper (3)",
-		"S - Spider (2)",
-		"B - Beetle (2)",
-	}
-	
-	// Initialize empty board representation
-	board := []string{
-		"     Board",
-		"",
-		"  [Empty Board]",
-		"",
-		"  Use commands to",
-		"  place pieces",
-	}
+	board := NewHexBoard()
+	renderer := NewHexRenderer(board)
 	
 	return HiveModel{
 		game:      game,
 		textInput: ti,
 		messages:  []string{},
-		pieces:    pieces,
 		board:     board,
+		renderer:  renderer,
+		lastError: "",
 		width:     120,
 		height:    30,
 	}
@@ -101,13 +91,8 @@ func (m HiveModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			value := strings.TrimSpace(m.textInput.Value())
 			if value != "" {
-				m.messages = append(m.messages, value)
+				m = m.handleCommand(value)
 				m.textInput.SetValue("")
-				
-				// Simple command processing (you can expand this)
-				if strings.Contains(strings.ToLower(value), "place") {
-					m.board = append(m.board, fmt.Sprintf("  * Piece placed: %s", value))
-				}
 			}
 			return m, nil
 		}
@@ -115,6 +100,57 @@ func (m HiveModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	
 	m.textInput, cmd = m.textInput.Update(msg)
 	return m, cmd
+}
+
+func (m HiveModel) handleCommand(input string) HiveModel {
+	// Add to message history
+	m.messages = append(m.messages, input)
+	m.lastError = ""
+	
+	// Parse command
+	command := ParseCommand(input)
+	
+	if command.Type == InvalidCommand {
+		m.lastError = command.Error
+		return m
+	}
+	
+	switch command.Type {
+	case PlaceCommand:
+		m = m.handlePlaceCommand(command)
+	case MoveCommand:
+		m = m.handleMoveCommand(command)
+	}
+	
+	return m
+}
+
+func (m HiveModel) handlePlaceCommand(cmd Command) HiveModel {
+	// Parse the piece string
+	piece, err := ParsePieceString(cmd.Piece)
+	if err != nil {
+		m.lastError = err.Error()
+		return m
+	}
+	
+	// Place the piece on the board
+	m.board.PlacePiece(cmd.ToCoord, piece)
+	
+	return m
+}
+
+func (m HiveModel) handleMoveCommand(cmd Command) HiveModel {
+	// Remove piece from source
+	piece, ok := m.board.RemovePiece(cmd.FromCoord)
+	if !ok {
+		m.lastError = fmt.Sprintf("No piece at (%d, %d)", cmd.FromCoord.Q, cmd.FromCoord.R)
+		return m
+	}
+	
+	// Place piece at destination
+	m.board.PlacePiece(cmd.ToCoord, piece)
+	
+	return m
 }
 
 func (m HiveModel) View() string {
@@ -148,13 +184,32 @@ func (m HiveModel) View() string {
 func (m HiveModel) renderPiecesPanel(width, height int) string {
 	var b strings.Builder
 	
-	b.WriteString(PanelTitleStyle.Render("Available Pieces"))
+	b.WriteString(PanelTitleStyle.Render("Piece Reference"))
 	b.WriteString("\n\n")
 	
-	for _, piece := range m.pieces {
-		b.WriteString(PieceStyle.Render(piece))
-		b.WriteString("\n")
-	}
+	b.WriteString(PieceStyle.Render("White pieces:"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  WQ - Queen"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  WA1,2,3 - Ants"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  WG1,2,3 - Hoppers"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  WS1,2 - Spiders"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  WB1,2 - Beetles"))
+	b.WriteString("\n\n")
+	
+	b.WriteString(PieceStyle.Render("Black pieces:"))
+	b.WriteString("\n")
+	b.WriteString(PieceStyle.Render("  BQ, BA1-3, etc."))
+	b.WriteString("\n\n")
+	
+	b.WriteString(DescriptionStyle.Render("Coordinates:"))
+	b.WriteString("\n")
+	b.WriteString(DescriptionStyle.Render("  (q, r) format"))
+	b.WriteString("\n")
+	b.WriteString(DescriptionStyle.Render("  Axial hex grid"))
 	
 	content := b.String()
 	return PanelStyle.Width(width).Height(height).Render(content)
@@ -164,9 +219,11 @@ func (m HiveModel) renderBoardPanel(width, height int) string {
 	var b strings.Builder
 	
 	b.WriteString(PanelTitleStyle.Render("Game Board"))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 	
-	for _, line := range m.board {
+	// Render the hexagonal board
+	boardLines := m.renderer.Render(width, height)
+	for _, line := range boardLines {
 		b.WriteString(BoardStyle.Render(line))
 		b.WriteString("\n")
 	}
@@ -183,8 +240,15 @@ func (m HiveModel) renderCommandPanel(width, height int) string {
 	
 	b.WriteString(InputLabelStyle.Render("> "))
 	b.WriteString(m.textInput.View())
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 	
+	// Show error if present
+	if m.lastError != "" {
+		b.WriteString("\n")
+		b.WriteString(ErrorStyle.Render("Error: " + m.lastError))
+	}
+	
+	b.WriteString("\n")
 	b.WriteString(HelpStyle.Render("enter: submit • esc: quit"))
 	
 	content := b.String()
@@ -199,6 +263,12 @@ func (m HiveModel) renderHistoryPanel(width, height int) string {
 	
 	if len(m.messages) == 0 {
 		b.WriteString(DescriptionStyle.Render("  No commands yet..."))
+		b.WriteString("\n\n")
+		b.WriteString(DescriptionStyle.Render("  Try:"))
+		b.WriteString("\n")
+		b.WriteString(DescriptionStyle.Render("  place WQ 0 0"))
+		b.WriteString("\n")
+		b.WriteString(DescriptionStyle.Render("  place BA1 1 0"))
 	} else {
 		// Show last 5 messages
 		start := 0
@@ -221,3 +291,4 @@ func (m HiveModel) renderHistoryPanel(width, height int) string {
 func (m HiveModel) Messages() []string {
 	return m.messages
 }
+
